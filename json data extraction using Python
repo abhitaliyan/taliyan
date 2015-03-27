@@ -1,0 +1,19 @@
+import json
+import csv
+import sys
+
+data = []
+with open('test.json') as f:
+    for line in f:
+        data.append(json.loads(line))
+       
+f=csv.writer(open('test.csv','wb+'))
+f.writerow(["city", 'review_count', "name", "neighborhoods", "open",'business_id','full_address','state','longitude','latitude','type','categories'])
+for item in data:
+ f.writerow([unicode(item['city']).encode('utf8'),unicode(item['review_count']).encode('utf8'),
+             unicode(item['name']).encode('utf8'),unicode(item['neighborhoods']).encode('utf8'),
+             unicode(item['open']).encode('utf8'),unicode(item['business_id']).encode('utf8'),
+             unicode(item['full_address']).encode('utf8'),unicode(item['state']).encode('utf8'),
+             unicode(item['longitude']).encode('utf8'),unicode(item['latitude']).encode('utf8'),
+             unicode(item['type']).encode('utf8'), unicode(item['categories']).encode('utf8')])
+ 
