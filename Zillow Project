@@ -1,0 +1,298 @@
+# -*- coding: cp1252 -*-
+#Importing all the required modules
+import csv
+import urllib2
+import sys
+import urllib
+#from openpyxl import load_workbook
+import time
+import datetime
+import mechanize
+import cookielib
+import re
+import json
+import urlparse
+from bs4 import BeautifulSoup
+from itertools import islice
+from urllib2 import HTTPError
+
+#level 1
+
+text_prefix='http://www.zillow.com/homes/for_sale/Champaign-IL/4042_rid/1150-_size/built_sort/40.287383,-88.06778,39.975015,-88.520279_rect/10_zm/'
+text_suffix='_p/'
+urls=['http://www.zillow.com/homes/for_sale/Champaign-IL/4042_rid/1150-_size/built_sort/40.287383,-88.06778,39.975015,-88.520279_rect/10_zm/']
+for i in range (2,22):
+    urls.append(text_prefix + str(i) + text_suffix)
+
+houselinks = [] #Declaring the empty array to store all individual listing links
+
+for url in urls: #iterating over links
+    page = urllib2.urlopen(url).read() #opening link
+    soup = BeautifulSoup(page) #parsing link
+    links = soup.findAll('a',{'class':'hdp-link routable'}) #Identifying all classes with house listing link
+    for link in links:
+        link = link['href'] #Extracting required link from href attribute
+        finallink = 'http://www.zillow.com' + link #concatenating base website link to it, browser does this automatically
+        houselinks.append(finallink) #appending this final link to our array
+
+with open('House_details.csv', 'wb') as csvfile: # creating a file as csv in write mode (wb), there is one more mode 'ab' in that already existing csv will get opened & appended
+    spamwriter = csv.writer(csvfile, delimiter=',') #specifying delimiter for csv
+    spamwriter.writerow(['House_Address','Price','Zestimate','Bedrooms','Bathrooms','SqFT','lot','yearbuilt','heattype','zillowdays',
+                         'cooling','parking','basement','fireplace','floorcover']) #writing header row in csv
+
+    for houselink in houselinks:
+        print houselink #If you remove this code will run faster, included it to keep track of code
+        page = urllib2.urlopen(houselink).read() #opening link
+        soup = BeautifulSoup(page) #parsing link
+        address = soup.find('h1',{'class':'prop-addr'}) #finding html address of house address
+        price = soup.find('h2',{'class':'prop-value-price'}) #finding html address of price info, find used to find only instance of price
+        price1 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        price2 = soup.find('h3',{'class':'prop-value-zestimate'}) #finding html address of price info, find used to find only instance of price
+        price3 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        #Price address was not unique becuase of presence of Zestimate price also on page
+        bedroom = soup.findAll('span',{'class':'prop-facts-value'})[0]
+        bathroom = soup.findAll('span',{'class':'prop-facts-value'})[1]
+        try:                                                                #Do this in case code encounters <ErrorName> then do this
+            SqFt = soup.findAll('span',{'class':'prop-facts-value'})[2]     # Look into "next" & "continue" options also for Python error handling for skipping to next iteration or doing nothing in case of error
+        except IndexError:
+            SqFt = ""
+        lot = soup.findAll('span',{'class':'prop-facts-value'})[3]
+        YrBuilt = soup.findAll('span',{'class':'prop-facts-value'})[4]
+        Heattype = soup.findAll('span',{'class':'prop-facts-value'})[5]
+        zillowdays = soup.findAll('span',{'class':'prop-facts-val'})[0]
+        cooling = soup.findAll('span',{'class':'prop-facts-val'})[1]
+        parking = soup.findAll('span',{'class':'prop-facts-val'})[2]
+        basement = soup.findAll('span',{'class':'prop-facts-val'})[3]
+        fireplace = soup.findAll('span',{'class':'prop-facts-val'})[4]
+        floorcover = soup.findAll('span',{'class':'prop-facts-val'})[5]
+        
+        #As all facts related to house have similar structure, I used index value '0' here to correctly identify bedroom which is 1st fact in the list
+        a_cleaned = unicode(u' '.join(address.stripped_strings)).encode('utf8').strip() #cleaning i.e getting required text part from html structure corresponding to variable a & then converting it to make it writable to csv
+        b_cleaned = unicode(u' '.join(price1.stripped_strings)).encode('utf8').strip() #cleaning
+        c_cleaned = unicode(u' '.join(price3.stripped_strings)).encode('utf8').strip() #cleaning
+        d_cleaned = unicode(u' '.join(bedroom.stripped_strings)).encode('utf8').strip()
+        e_cleaned = unicode(u' '.join(bathroom.stripped_strings)).encode('utf8').strip()
+        f_cleaned = unicode(u' '.join(SqFt.stripped_strings)).encode('utf8').strip()
+        g_cleaned = unicode(u' '.join(lot.stripped_strings)).encode('utf8').strip()
+        h_cleaned = unicode(u' '.join(YrBuilt.stripped_strings)).encode('utf8').strip()
+        i_cleaned = unicode(u' '.join(Heattype.stripped_strings)).encode('utf8').strip()
+        j_cleaned = unicode(u' '.join(zillowdays.stripped_strings)).encode('utf8').strip()
+        k_cleaned = unicode(u' '.join(cooling.stripped_strings)).encode('utf8').strip()
+        l_cleaned = unicode(u' '.join(parking.stripped_strings)).encode('utf8').strip()
+        m_cleaned = unicode(u' '.join(basement.stripped_strings)).encode('utf8').strip()
+        n_cleaned = unicode(u' '.join(fireplace.stripped_strings)).encode('utf8').strip()
+        o_cleaned = unicode(u' '.join(floorcover.stripped_strings)).encode('utf8').strip()
+        spamwriter.writerow([a_cleaned,b_cleaned,c_cleaned,d_cleaned,e_cleaned,f_cleaned,g_cleaned,h_cleaned,i_cleaned,j_cleaned,k_cleaned,l_cleaned,m_cleaned,n_cleaned,o_cleaned]) #writing row for that address price combination
+
+
+        
+        
+
+#level 2
+
+text_prefix='http://www.zillow.com/homes/for_sale/Champaign-IL/4042_rid/1-1150_size/built_sort/40.288169,-88.067436,39.975278,-88.519936_rect/10_zm/'
+text_suffix='_p/'
+urls=['http://www.zillow.com/homes/for_sale/Champaign-IL/4042_rid/1-1150_size/built_sort/40.288169,-88.067436,39.975278,-88.519936_rect/10_zm/']
+for i in range (2,22):
+    urls.append(text_prefix + str(i) + text_suffix)
+
+houselinks = [] #Declaring the empty array to store all individual listing links
+
+for url in urls: #iterating over links
+    page = urllib2.urlopen(url).read() #opening link
+    soup = BeautifulSoup(page) #parsing link
+    links = soup.findAll('a',{'class':'hdp-link routable'}) #Identifying all classes with house listing link
+    for link in links:
+        link = link['href'] #Extracting required link from href attribute
+        finallink = 'http://www.zillow.com' + link #concatenating base website link to it, browser does this automatically
+        houselinks.append(finallink) #appending this final link to our array
+
+with open('House_details.csv', 'ab') as csvfile: # creating a file as csv in write mode (wb), there is one more mode 'ab' in that already existing csv will get opened & appended
+    spamwriter = csv.writer(csvfile, delimiter=',') #specifying delimiter for csv
+    spamwriter.writerow(['House_Address','Price','Zestimate','Bedrooms','Bathrooms','SqFT','lot','yearbuilt','heattype','zillowdays',
+                         'cooling','parking','basement','fireplace','floorcover']) #writing header row in csv
+
+    for houselink in houselinks:
+        print houselink #If you remove this code will run faster, included it to keep track of code
+        page = urllib2.urlopen(houselink).read() #opening link
+        soup = BeautifulSoup(page) #parsing link
+        address = soup.find('h1',{'class':'prop-addr'}) #finding html address of house address
+        price = soup.find('h2',{'class':'prop-value-price'}) #finding html address of price info, find used to find only instance of price
+        price1 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        price2 = soup.find('h3',{'class':'prop-value-zestimate'}) #finding html address of price info, find used to find only instance of price
+        price3 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        #Price address was not unique becuase of presence of Zestimate price also on page
+        bedroom = soup.findAll('span',{'class':'prop-facts-value'})[0]
+        bathroom = soup.findAll('span',{'class':'prop-facts-value'})[1]
+        try:                                                                #Do this in case code encounters <ErrorName> then do this
+            SqFt = soup.findAll('span',{'class':'prop-facts-value'})[2]     # Look into "next" & "continue" options also for Python error handling for skipping to next iteration or doing nothing in case of error
+        except IndexError:
+            SqFt = ""
+        lot = soup.findAll('span',{'class':'prop-facts-value'})[3]
+        YrBuilt = soup.findAll('span',{'class':'prop-facts-value'})[4]
+        Heattype = soup.findAll('span',{'class':'prop-facts-value'})[5]
+        zillowdays = soup.findAll('span',{'class':'prop-facts-val'})[0]
+        cooling = soup.findAll('span',{'class':'prop-facts-val'})[1]
+        parking = soup.findAll('span',{'class':'prop-facts-val'})[2]
+        basement = soup.findAll('span',{'class':'prop-facts-val'})[3]
+        fireplace = soup.findAll('span',{'class':'prop-facts-val'})[4]
+        floorcover = soup.findAll('span',{'class':'prop-facts-val'})[5]
+        
+        #As all facts related to house have similar structure, I used index value '0' here to correctly identify bedroom which is 1st fact in the list
+        a_cleaned = unicode(u' '.join(address.stripped_strings)).encode('utf8').strip() #cleaning i.e getting required text part from html structure corresponding to variable a & then converting it to make it writable to csv
+        b_cleaned = unicode(u' '.join(price1.stripped_strings)).encode('utf8').strip() #cleaning
+        c_cleaned = unicode(u' '.join(price3.stripped_strings)).encode('utf8').strip() #cleaning
+        d_cleaned = unicode(u' '.join(bedroom.stripped_strings)).encode('utf8').strip()
+        e_cleaned = unicode(u' '.join(bathroom.stripped_strings)).encode('utf8').strip()
+        f_cleaned = unicode(u' '.join(SqFt.stripped_strings)).encode('utf8').strip()
+        g_cleaned = unicode(u' '.join(lot.stripped_strings)).encode('utf8').strip()
+        h_cleaned = unicode(u' '.join(YrBuilt.stripped_strings)).encode('utf8').strip()
+        i_cleaned = unicode(u' '.join(Heattype.stripped_strings)).encode('utf8').strip()
+        j_cleaned = unicode(u' '.join(zillowdays.stripped_strings)).encode('utf8').strip()
+        k_cleaned = unicode(u' '.join(cooling.stripped_strings)).encode('utf8').strip()
+        l_cleaned = unicode(u' '.join(parking.stripped_strings)).encode('utf8').strip()
+        m_cleaned = unicode(u' '.join(basement.stripped_strings)).encode('utf8').strip()
+        n_cleaned = unicode(u' '.join(fireplace.stripped_strings)).encode('utf8').strip()
+        o_cleaned = unicode(u' '.join(floorcover.stripped_strings)).encode('utf8').strip()
+        spamwriter.writerow([a_cleaned,b_cleaned,c_cleaned,d_cleaned,e_cleaned,f_cleaned,g_cleaned,h_cleaned,i_cleaned,j_cleaned,k_cleaned,l_cleaned,m_cleaned,n_cleaned,o_cleaned]) #writing row for that address price combination
+
+
+        
+            
+#level 3
+
+text_prefix='http://www.zillow.com/homes/for_sale/Champaign-IL/4042_rid/0-1_size/built_sort/40.288169,-88.067436,39.975278,-88.519936_rect/10_zm/'
+text_suffix='_p/'
+urls=['http://www.zillow.com/homes/for_sale/Champaign-IL/4042_rid/0-1_size/built_sort/40.288169,-88.067436,39.975278,-88.519936_rect/10_zm/']
+for i in range (2,22):
+    urls.append(text_prefix + str(i) + text_suffix)
+
+houselinks = [] #Declaring the empty array to store all individual listing links
+
+for url in urls: #iterating over links
+    page = urllib2.urlopen(url).read() #opening link
+    soup = BeautifulSoup(page) #parsing link
+    links = soup.findAll('a',{'class':'hdp-link routable'}) #Identifying all classes with house listing link
+    for link in links:
+        link = link['href'] #Extracting required link from href attribute
+        finallink = 'http://www.zillow.com' + link #concatenating base website link to it, browser does this automatically
+        houselinks.append(finallink) #appending this final link to our array
+
+with open('House_details.csv', 'ab') as csvfile: # creating a file as csv in write mode (wb), there is one more mode 'ab' in that already existing csv will get opened & appended
+    spamwriter = csv.writer(csvfile, delimiter=',') #specifying delimiter for csv
+    spamwriter.writerow(['House_Address','Price','Zestimate','Bedrooms','Bathrooms','SqFT','lot','yearbuilt','heattype','zillowdays',
+                         'cooling','parking','basement','fireplace','floorcover']) #writing header row in csv
+
+    for houselink in houselinks:
+        print houselink #If you remove this code will run faster, included it to keep track of code
+        page = urllib2.urlopen(houselink).read() #opening link
+        soup = BeautifulSoup(page) #parsing link
+        address = soup.find('h1',{'class':'prop-addr'}) #finding html address of house address
+        price = soup.find('h2',{'class':'prop-value-price'}) #finding html address of price info, find used to find only instance of price
+        price1 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        price2 = soup.find('h3',{'class':'prop-value-zestimate'}) #finding html address of price info, find used to find only instance of price
+        price3 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        #Price address was not unique becuase of presence of Zestimate price also on page
+        bedroom = soup.findAll('span',{'class':'prop-facts-value'})[0]
+        bathroom = soup.findAll('span',{'class':'prop-facts-value'})[1]
+        try:                                                                #Do this in case code encounters <ErrorName> then do this
+            SqFt = soup.findAll('span',{'class':'prop-facts-value'})[2]     # Look into "next" & "continue" options also for Python error handling for skipping to next iteration or doing nothing in case of error
+        except IndexError:
+            SqFt = ""
+        lot = soup.findAll('span',{'class':'prop-facts-value'})[3]
+        YrBuilt = soup.findAll('span',{'class':'prop-facts-value'})[4]
+        Heattype = soup.findAll('span',{'class':'prop-facts-value'})[5]
+        zillowdays = soup.findAll('span',{'class':'prop-facts-val'})[0]
+        cooling = soup.findAll('span',{'class':'prop-facts-val'})[1]
+        parking = soup.findAll('span',{'class':'prop-facts-val'})[2]
+        basement = soup.findAll('span',{'class':'prop-facts-val'})[3]
+        fireplace = soup.findAll('span',{'class':'prop-facts-val'})[4]
+        floorcover = soup.findAll('span',{'class':'prop-facts-val'})[5]
+        
+        #As all facts related to house have similar structure, I used index value '0' here to correctly identify bedroom which is 1st fact in the list
+        a_cleaned = unicode(u' '.join(address.stripped_strings)).encode('utf8').strip() #cleaning i.e getting required text part from html structure corresponding to variable a & then converting it to make it writable to csv
+        b_cleaned = unicode(u' '.join(price1.stripped_strings)).encode('utf8').strip() #cleaning
+        c_cleaned = unicode(u' '.join(price3.stripped_strings)).encode('utf8').strip() #cleaning
+        d_cleaned = unicode(u' '.join(bedroom.stripped_strings)).encode('utf8').strip()
+        e_cleaned = unicode(u' '.join(bathroom.stripped_strings)).encode('utf8').strip()
+        f_cleaned = unicode(u' '.join(SqFt.stripped_strings)).encode('utf8').strip()
+        g_cleaned = unicode(u' '.join(lot.stripped_strings)).encode('utf8').strip()
+        h_cleaned = unicode(u' '.join(YrBuilt.stripped_strings)).encode('utf8').strip()
+        i_cleaned = unicode(u' '.join(Heattype.stripped_strings)).encode('utf8').strip()
+        j_cleaned = unicode(u' '.join(zillowdays.stripped_strings)).encode('utf8').strip()
+        k_cleaned = unicode(u' '.join(cooling.stripped_strings)).encode('utf8').strip()
+        l_cleaned = unicode(u' '.join(parking.stripped_strings)).encode('utf8').strip()
+        m_cleaned = unicode(u' '.join(basement.stripped_strings)).encode('utf8').strip()
+        n_cleaned = unicode(u' '.join(fireplace.stripped_strings)).encode('utf8').strip()
+        o_cleaned = unicode(u' '.join(floorcover.stripped_strings)).encode('utf8').strip()
+        spamwriter.writerow([a_cleaned,b_cleaned,c_cleaned,d_cleaned,e_cleaned,f_cleaned,g_cleaned,h_cleaned,i_cleaned,j_cleaned,k_cleaned,l_cleaned,m_cleaned,n_cleaned,o_cleaned]) #writing row for that address price combination
+
+        
+        
+#level 4
+
+text_prefix='http://www.zillow.com/homes/for_sale/Urbana-IL/7645_rid/built_sort/40.274287,-87.920837,39.961859,-88.373337_rect/10_zm/'
+text_suffix='_p/'
+urls=['http://www.zillow.com/homes/for_sale/Urbana-IL/7645_rid/built_sort/40.274287,-87.920837,39.961859,-88.373337_rect/10_zm/']
+for i in range (2,22):
+    urls.append(text_prefix + str(i) + text_suffix)
+
+houselinks = [] #Declaring the empty array to store all individual listing links
+
+for url in urls: #iterating over links
+    page = urllib2.urlopen(url).read() #opening link
+    soup = BeautifulSoup(page) #parsing link
+    links = soup.findAll('a',{'class':'hdp-link routable'}) #Identifying all classes with house listing link
+    for link in links:
+        link = link['href'] #Extracting required link from href attribute
+        finallink = 'http://www.zillow.com' + link #concatenating base website link to it, browser does this automatically
+        houselinks.append(finallink) #appending this final link to our array
+
+with open('House_details.csv', 'ab') as csvfile: # creating a file as csv in write mode (wb), there is one more mode 'ab' in that already existing csv will get opened & appended
+    spamwriter = csv.writer(csvfile, delimiter=',') #specifying delimiter for csv
+    spamwriter.writerow(['House_Address','Price','Zestimate','Bedrooms','Bathrooms','SqFT','lot','yearbuilt','heattype','zillowdays',
+                         'cooling','parking','basement','fireplace','floorcover']) #writing header row in csv
+
+    for houselink in houselinks:
+        print houselink #If you remove this code will run faster, included it to keep track of code
+        page = urllib2.urlopen(houselink).read() #opening link
+        soup = BeautifulSoup(page) #parsing link
+        address = soup.find('h1',{'class':'prop-addr'}) #finding html address of house address
+        price = soup.find('h2',{'class':'prop-value-price'}) #finding html address of price info, find used to find only instance of price
+        price1 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        price2 = soup.find('h3',{'class':'prop-value-zestimate'}) #finding html address of price info, find used to find only instance of price
+        price3 = price.find('span',{'class':'value'}) #Had to do this as price address was not unique at granular level, used upper level to identify it
+        #Price address was not unique becuase of presence of Zestimate price also on page
+        bedroom = soup.findAll('span',{'class':'prop-facts-value'})[0]
+        bathroom = soup.findAll('span',{'class':'prop-facts-value'})[1]
+        try:                                                                #Do this in case code encounters <ErrorName> then do this
+            SqFt = soup.findAll('span',{'class':'prop-facts-value'})[2]     # Look into "next" & "continue" options also for Python error handling for skipping to next iteration or doing nothing in case of error
+        except IndexError:
+            SqFt = ""
+        lot = soup.findAll('span',{'class':'prop-facts-value'})[3]
+        YrBuilt = soup.findAll('span',{'class':'prop-facts-value'})[4]
+        Heattype = soup.findAll('span',{'class':'prop-facts-value'})[5]
+        zillowdays = soup.findAll('span',{'class':'prop-facts-val'})[0]
+        cooling = soup.findAll('span',{'class':'prop-facts-val'})[1]
+        parking = soup.findAll('span',{'class':'prop-facts-val'})[2]
+        basement = soup.findAll('span',{'class':'prop-facts-val'})[3]
+        fireplace = soup.findAll('span',{'class':'prop-facts-val'})[4]
+        floorcover = soup.findAll('span',{'class':'prop-facts-val'})[5]
+        
+        #As all facts related to house have similar structure, I used index value '0' here to correctly identify bedroom which is 1st fact in the list
+        a_cleaned = unicode(u' '.join(address.stripped_strings)).encode('utf8').strip() #cleaning i.e getting required text part from html structure corresponding to variable a & then converting it to make it writable to csv
+        b_cleaned = unicode(u' '.join(price1.stripped_strings)).encode('utf8').strip() #cleaning
+        c_cleaned = unicode(u' '.join(price3.stripped_strings)).encode('utf8').strip() #cleaning
+        d_cleaned = unicode(u' '.join(bedroom.stripped_strings)).encode('utf8').strip()
+        e_cleaned = unicode(u' '.join(bathroom.stripped_strings)).encode('utf8').strip()
+        f_cleaned = unicode(u' '.join(SqFt.stripped_strings)).encode('utf8').strip()
+        g_cleaned = unicode(u' '.join(lot.stripped_strings)).encode('utf8').strip()
+        h_cleaned = unicode(u' '.join(YrBuilt.stripped_strings)).encode('utf8').strip()
+        i_cleaned = unicode(u' '.join(Heattype.stripped_strings)).encode('utf8').strip()
+        j_cleaned = unicode(u' '.join(zillowdays.stripped_strings)).encode('utf8').strip()
+        k_cleaned = unicode(u' '.join(cooling.stripped_strings)).encode('utf8').strip()
+        l_cleaned = unicode(u' '.join(parking.stripped_strings)).encode('utf8').strip()
+        m_cleaned = unicode(u' '.join(basement.stripped_strings)).encode('utf8').strip()
+        n_cleaned = unicode(u' '.join(fireplace.stripped_strings)).encode('utf8').strip()
+        o_cleaned = unicode(u' '.join(floorcover.stripped_strings)).encode('utf8').strip()
+        spamwriter.writerow([a_cleaned,b_cleaned,c_cleaned,d_cleaned,e_cleaned,f_cleaned,g_cleaned,h_cleaned,i_cleaned,j_cleaned,k_cleaned,l_cleaned,m_cleaned,n_cleaned,o_cleaned]) #writing row for that address price combination
