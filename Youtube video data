@@ -1,0 +1,170 @@
+# -*- coding: cp1252 -*-
+#Importing all the required modules
+import csv
+import urllib2
+import sys
+import urllib
+import os
+#from openpyxl import load_workbook
+import time
+import datetime
+import mechanize
+import cookielib
+import re
+import json
+import urlparse
+import requests
+import gdata
+import gdata.youtube
+import gdata.youtube.service
+import codecs
+from bs4 import BeautifulSoup
+from itertools import islice
+from urllib2 import HTTPError
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+
+
+print ("#--------------MSFT APP STORE-------------#")
+
+with open("AppNames.csv", "rb") as in_file, open("AppData.csv", "wb") as out_file:
+   reader = csv.reader(in_file)
+   writer = csv.writer(out_file)
+   headers = next(reader, None)  # returns the headers or `None` if the input is empty
+   if headers:
+        writer.writerow(headers) 
+   #Processing each row of uncleaned csv by calling the functions on them
+   i=1
+   youTubeHeader = 'http://www.youtube.com'
+   linkList = []
+   vid_time_list = []
+   for row in reader:
+       
+       query = row[0]
+       print "Item to be searched: " + query
+
+       queryModified = query.replace(' ','%20')
+       urls = [
+                "http://www.youtube.com/results?search_sort=video_view_count&search_query=" + queryModified + "&sm=20",
+                "http://www.youtube.com/results?search_sort=video_view_count&search_query=" + queryModified + "&filters=video&page=2",
+                "http://www.youtube.com/results?search_sort=video_view_count&search_query=" + queryModified + "&filters=video&page=3",
+                "http://www.youtube.com/results?search_sort=video_view_count&search_query=" + queryModified + "&filters=video&page=4",
+                "http://www.youtube.com/results?search_sort=video_view_count&search_query=" + queryModified + "&filters=video&page=5"
+                ]
+       
+       for url in urls:
+            
+               page = urllib2.urlopen(url).read()
+               soup = BeautifulSoup(page)
+               links = soup.findAll('a','yt-uix-sessionlink yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2')
+               vid_times = soup.findAll('span','video-time')
+               total_search_results = soup.find('p','num-results').text.replace('About','').replace('about','').replace('Page 2 of','').replace('results','').strip()
+               
+               for link, vid_time in zip(links, vid_times):
+                    link = youTubeHeader + link['href']
+                    vid_time = u' '.join(vid_time.stripped_strings).strip()
+                    print link, vid_time
+                    linkList.append(link)
+                    vid_time_list.append(vid_time)
+
+               for video, vid_time_duration in zip(linkList, vid_time_list):
+                    page_vid = urllib2.urlopen(video).read()
+                    soup_vid = BeautifulSoup(page_vid)
+                    
+                    try:
+                         vid_paid_infox = soup_vid.find('div','  content-alignment')
+                         vid_paid_info  = vid_paid_infox.findAll('meta')[2]['content']
+                         print vid_paid_info
+                    except:
+                         vid_paid_info = "False"
+                         
+                    try:
+                         vid_paid_infox   = soup_vid.find('div','  content-alignment')
+                         vid_height_info  = vid_paid_infox.findAll('meta')[11]['content']
+                         print vid_height_info
+                    except:
+                         vid_height_info = "NA"
+
+                    try:
+                         vid_paid_infox   = soup_vid.find('div','  content-alignment')
+                         vid_width_info  = vid_paid_infox.findAll('meta')[10]['content']
+                         print vid_width_info
+                    except:
+                         vid_width_info = "NA"
+
+                    try:
+                         vid_title = soup_vid.find('div','clearfix  yt-uix-expander yt-uix-expander-collapsed').text.strip()
+                    except:
+                         vid_title = "Not Found!"
+
+                    try:     
+                         vid_views = soup_vid.find('span','watch-view-count ').text.strip()
+                    except:
+                         vid_views = "Not Found!"
+
+                    try:     
+                         vid_likes = soup_vid.find('span','likes-count').text.strip()
+                    except:
+                         vid_likes = "Not Found!"
+
+                    try:     
+                         vid_dislikes = soup_vid.find('span','dislikes-count').text.strip()
+                    except:
+                         vid_dislikes = "Not Found!"
+                         
+                    try:
+                         vid_by = soup_vid.find('a','g-hovercard yt-uix-sessionlink yt-user-name ').text.strip()
+                    except:
+                         vid_by = "Not Found!"
+
+                    try:
+                         total_vid_by_user = soup_vid.find('a','yt-uix-sessionlink yt-user-videos').text.replace('videos','').strip()
+                    except:
+                         total_vid_by_user = "Not Found!"
+
+                    try:
+                         total_subscribers = soup_vid.find('span','yt-subscription-button-subscriber-count-branded-horizontal').text
+                    except:
+                         total_subscribers = "Not Found"
+
+                    try:
+                         vid_date = soup_vid.find('span','watch-video-date').text.strip()
+                    except:
+                         vid_date = "Not Found!"
+
+                    try:  
+                         vid_category = soup_vid.find('p',{'id':'eow-category'}).text
+                    except:
+                         vid_category = "Not Found!"
+                              
+                    
+                    print vid_title, vid_views, vid_likes, vid_dislikes, vid_by, vid_time, vid_date, vid_category, vid_time_duration, total_vid_by_user, total_subscribers
+
+                    with open ("Results.csv","ab") as csvfile:
+                       spamwriter = csv.writer(csvfile, delimiter=',')
+                       spamwriter.writerow([query,
+                                            unicode(u''.join(vid_title)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_views)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_likes)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_dislikes)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_by)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_date)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_category)).encode('utf8').strip(),
+                                            unicode(u''.join(vid_time_duration)).encode('utf8').strip(),
+                                            video,
+                                            total_search_results,
+                                            total_vid_by_user,
+                                            total_subscribers,
+                                            vid_paid_info,
+                                            vid_height_info,
+                                            vid_width_info])
+                       print "Done"
+
+                    linkList = []
+                    vid_time_list = []
+                    
+                    i = i + 1
+
+
+                         
+
