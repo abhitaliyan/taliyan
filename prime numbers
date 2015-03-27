@@ -1,0 +1,25 @@
+import math
+
+num = int(raw_input("Enter the positive integer:"))
+
+assert num > 0
+
+def is_prime(n):
+    if n == 2:
+        return True
+    if n == 1 or n == 0:
+        return False
+    if n % 2 == 0 and n > 2: 
+        return False
+    for i in range(3, int(math.sqrt(n)) + 1, 2):
+        if n % i == 0:
+            return False
+    return True
+cnt = 0
+for i in range(num):
+    check = is_prime(i)
+    if check == True:
+        cnt = cnt+1
+
+print "Prime numbers less than " + str(num) + " are " + str(cnt)
+    
